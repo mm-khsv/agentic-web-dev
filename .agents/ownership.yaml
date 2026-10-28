@@ -1,0 +1,11 @@
+﻿# Initial path ownership policy.
+# The runtime must enforce these rules before granting write access.
+"workflow/**":
+  - orchestrator
+"logs/**":
+  - orchestrator
+"specs/**":
+  - requirements-analyst
+"app/**":
+  - frontend-engineer
+  - api-engineer

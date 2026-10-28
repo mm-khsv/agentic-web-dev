@@ -1,0 +1,38 @@
+{
+  "run_id": "ac10609e-598e-4a39-a3b2-32d372556cde",
+  "user_request": "درخواست آزمایشی برای بررسی رد",
+  "status": "rejected",
+  "current_stage": "intake",
+  "assigned_agent": "requirements-analyst",
+  "created_at": "2026-10-28T02:26:56.233302+00:00",
+  "updated_at": "2026-10-28T03:01:54.471814+00:00",
+  "decision": {
+    "outcome": "rejected",
+    "reason": "نیازمندی‌ها هنوز به اندازه کافی مشخص نیستند",
+    "timestamp": "2026-10-28T03:01:54.471814+00:00"
+  },
+  "events": [
+    {
+      "type": "run_created",
+      "timestamp": "2026-10-28T02:26:56.233302+00:00",
+      "message": "Request received and validated."
+    },
+    {
+      "type": "agent_assigned",
+      "timestamp": "2026-10-28T02:26:56.233302+00:00",
+      "agent": "requirements-analyst",
+      "message": "Assigned for planning only. No LLM or external action was executed."
+    },
+    {
+      "type": "human_gate",
+      "timestamp": "2026-10-28T02:26:56.233302+00:00",
+      "message": "Human review is required before proceeding."
+    },
+    {
+      "type": "human_decision",
+      "timestamp": "2026-10-28T03:01:54.471814+00:00",
+      "outcome": "rejected",
+      "reason": "نیازمندی‌ها هنوز به اندازه کافی مشخص نیستند"
+    }
+  ]
+}

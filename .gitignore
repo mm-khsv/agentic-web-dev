@@ -1,0 +1,39 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+secrets/
+credentials/
+
+# Editors and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local backups and logs
+backups/
+logs/
+
+# Generated workflow runtime state
+workflow/runs/
+workflow/state.json
+
+# Temporary M3 smoke-test artifacts (not approved specifications)
+specs/001/m3-*.md
+
+# Pytest cache
+.pytest_cache/

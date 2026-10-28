@@ -1,0 +1,20 @@
+﻿version: 1
+
+defaults:
+  max_attempts: 3
+  parallel_execution: false
+
+needs_human_approval:
+  - action: approve_gate
+  - action: add_dependency
+  - action: edit_control_files
+  - action: external_network_action
+  - action: deploy
+  - action: send_message
+  - action: destructive_change
+
+never_allowed:
+  - read_secrets
+  - read_environment_files
+  - bypass_approval_gate
+  - hide_failed_checks
