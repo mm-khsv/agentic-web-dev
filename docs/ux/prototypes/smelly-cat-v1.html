@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Smelly Cat v1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --spacing-xxs: 0.25rem;
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --radius-sm: 4px;
+        --radius-md: 6px;
+        --radius-lg: 8px;
+        --font-base: 1rem;
+        --font-weight-normal: 400;
+        --font-weight-bold: 700;
+        --line-height-base: 1.5;
+        --color-bg: #ffffff;
+        --color-surface: #f9f9f9;
+        --color-primary: #0066cc;
+        --color-secondary: #0055aa;
+        --color-text: #000000;
+        --color-error: #d32f2f;
+        --color-success: #388e3c;
+        --color-warning: #f57c00;
+        --color-border: #cccccc;
+        --color-focus: #ffeb3b;
+        --color-toast-bg: #323232;
+        --color-toast-text: #ffffff;
+      }
+      [data-design-variant="a"] {
+        --color-bg: #ffffff;
+        --color-surface: #f9f9f9;
+        --color-primary: #0066cc;
+        --color-secondary: #0055aa;
+        --color-text: #000000;
+        --color-error: #d32f2f;
+        --color-success: #388e3c;
+        --color-border: #cccccc;
+        --color-focus: #ffeb3b;
+      }
+      [data-design-variant="b"] {
+        --color-bg: #222222;
+        --color-surface: #333333;
+        --color-primary: #ff9800;
+        --color-secondary: #e65100;
+        --color-text: #ffffff;
+        --color-error: #f44336;
+        --color-success: #4caf50;
+        --color-border: #555555;
+        --color-focus: #ffeb3b;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        font-size: var(--font-base);
+        line-height: var(--line-height-base);
+        color: var(--color-text);
+        background-color: var(--color-bg);
+      }
+      header {
+        background-color: var(--color-primary);
+        color: var(--color-toast-text);
+        padding: var(--spacing-sm) var(--spacing-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+      button {
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 1rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border: none;
+        border-radius: var(--radius-sm);
+        color: var(--color-toast-text);
+        background-color: var(--color-primary);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+      .design-variant {
+        display: none;
+        padding: var(--spacing-md);
+      }
+      .design-variant.active {
+        display: block;
+      }
+      form {
+        background-color: var(--color-surface);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      label {
+        display: block;
+        margin-bottom: var(--spacing-xs);
+        font-weight: var(--font-weight-bold);
+      }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: var(--spacing-xs);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        resize: vertical;
+      }
+      textarea:focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+      .tone-group {
+        margin-top: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+      }
+      .tone-group label {
+        margin-right: var(--spacing-sm);
+      }
+      .error-message {
+        color: var(--color-error);
+        margin-top: var(--spacing-xs);
+      }
+      #preview {
+        background-color: var(--color-surface);
+        padding: var(--spacing-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        margin-top: var(--spacing-md);
+        white-space: pre-wrap;
+        display: none;
+      }
+      #toast-container {
+        position: fixed;
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        z-index: 1000;
+      }
+      .toast {
+        background-color: var(--color-toast-bg);
+        color: var(--color-toast-text);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
+        border-radius: var(--radius-sm);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .toast {
+          transition: none;
+        }
+      }
+      #modal {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+      #modal.hidden {
+        display: none;
+      }
+      #modal-content {
+        background-color: var(--color-surface);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        max-width: 90%;
+        max-height: 90%;
+        overflow: auto;
+      }
+      #modal-content h2 {
+        margin-top: 0;
+      }
+      #draft-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      #draft-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-xs) 0;
+        border-bottom: 1px solid var(--color-border);
+      }
+      #draft-list li:last-child {
+        border-bottom: none;
+      }
+      #draft-detail {
+        display: none;
+      }
+      #draft-detail pre {
+        background-color: var(--color-surface);
+        padding: var(--spacing-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        white-space: pre-wrap;
+      }
+      #prototype-notice {
+        background-color: var(--color-warning);
+        color: var(--color-toast-text);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        text-align: center;
+        font-weight: var(--font-weight-bold);
+      }
+      @media (min-width: 481px) {
+        .form-row {
+          display: flex;
+          gap: var(--spacing-md);
+        }
+        .form-row > div {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Smelly Cat v1</h1>
+      <button data-action="switch-design">Switch Design</button>
+    </header>
+    <div id="prototype-notice">
+      prototype-only: localStorage is used for persistence; production will use
+      SQLite.
+    </div>
+    <div data-design-variant="a" class="design-variant active">
+      <form id="compose-form" novalidate>
+        <label for="message">Situation Details</label>
+        <textarea
+          id="message"
+          name="message"
+          aria-describedby="message-error"
+        ></textarea>
+        <div
+          id="message-error"
+          class="error-message"
+          aria-live="assertive"
+        ></div>
+        <div class="tone-group" role="radiogroup" aria-labelledby="tone-label">
+          <span id="tone-label" class="visually-hidden">Tone</span>
+          <label
+            ><input type="radio" name="tone" value="friendly" checked />
+            Friendly</label
+          >
+          <label
+            ><input type="radio" name="tone" value="formal" /> Formal</label
+          >
+        </div>
+        <div class="form-row">
+          <button type="button" data-action="preview">Preview</button>
+          <button type="button" data-action="copy" disabled>Copy</button>
+          <button type="button" data-action="save-draft" disabled>
+            Save Draft
+          </button>
+          <button type="button" data-action="view-drafts">View Drafts</button>
+        </div>
+        <pre id="preview" aria-live="polite"></pre>
+      </form>
+    </div>
+    <div data-design-variant="b" class="design-variant">
+      <form id="compose-form-b" novalidate>
+        <label for="message-b">Situation Details</label>
+        <textarea
+          id="message-b"
+          name="message"
+          aria-describedby="message-error-b"
+        ></textarea>
+        <div
+          id="message-error-b"
+          class="error-message"
+          aria-live="assertive"
+        ></div>
+        <div
+          class="tone-group"
+          role="radiogroup"
+          aria-labelledby="tone-label-b"
+        >
+          <span id="tone-label-b" class="visually-hidden">Tone</span>
+          <label
+            ><input type="radio" name="tone" value="friendly" checked />
+            Friendly</label
+          >
+          <label
+            ><input type="radio" name="tone" value="formal" /> Formal</label
+          >
+        </div>
+        <div class="form-row">
+          <button type="button" data-action="preview">Preview</button>
+          <button type="button" data-action="copy" disabled>Copy</button>
+          <button type="button" data-action="save-draft" disabled>
+            Save Draft
+          </button>
+          <button type="button" data-action="view-drafts">View Drafts</button>
+        </div>
+        <pre id="preview-b" aria-live="polite"></pre>
+      </form>
+    </div>
+    <div id="toast-container" aria-live="polite"></div>
+    <div
+      id="modal"
+      class="hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div id="modal-content">
+        <h2 id="modal-title">Drafts</h2>
+        <ul id="draft-list"></ul>
+        <div id="draft-detail">
+          <h3>Draft Detail</h3>
+          <p><strong>Tone:</strong> <span id="detail-tone"></span></p>
+          <p><strong>Created:</strong> <span id="detail-date"></span></p>
+          <pre id="detail-message"></pre>
+          <button type="button" data-action="back-to-list">Back</button>
+        </div>
+        <button type="button" data-action="close-modal">Close</button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        const STORAGE_KEY = "smelly-cat-drafts";
+        const formSelector = "form";
+        const previewSelector = "#preview";
+        const previewSelectorB = "#preview-b";
+        const copyBtnSelector = 'button[data-action="copy"]';
+        const saveBtnSelector = 'button[data-action="save-draft"]';
+        const previewBtnSelector = 'button[data-action="preview"]';
+        const viewDraftsBtnSelector = 'button[data-action="view-drafts"]';
+        const switchDesignBtn = document.querySelector(
+          'button[data-action="switch-design"]',
+        );
+        const toastContainer = document.getElementById("toast-container");
+        const modal = document.getElementById("modal");
+        const draftList = document.getElementById("draft-list");
+        const draftDetail = document.getElementById("draft-detail");
+        const detailTone = document.getElementById("detail-tone");
+        const detailDate = document.getElementById("detail-date");
+        const detailMessage = document.getElementById("detail-message");
+        const closeModalBtn = modal.querySelector(
+          'button[data-action="close-modal"]',
+        );
+        const backToListBtn = modal.querySelector(
+          'button[data-action="back-to-list"]',
+        );
+        let currentVariant = "a";
+        function showToast(message, type = "info") {
+          const toast = document.createElement("div");
+          toast.className = "toast";
+          toast.textContent = message;
+          if (type === "success")
+            toast.style.backgroundColor = getComputedStyle(
+              document.documentElement,
+            ).getPropertyValue("--color-success");
+          if (type === "error")
+            toast.style.backgroundColor = getComputedStyle(
+              document.documentElement,
+            ).getPropertyValue("--color-error");
+          toastContainer.appendChild(toast);
+          requestAnimationFrame(() => {
+            toast.classList.add("show");
+          });
+          setTimeout(() => {
+            toast.classList.remove("show");
+          }, 3000);
+          setTimeout(() => {
+            toastContainer.removeChild(toast);
+          }, 3500);
+        }
+        function getFormElements(variant) {
+          const form = document.querySelector(
+            `[data-design-variant="${variant}"] form`,
+          );
+          const textarea = form.querySelector("textarea");
+          const toneInputs = form.querySelectorAll('input[name="tone"]');
+          const previewBtn = form.querySelector(
+            'button[data-action="preview"]',
+          );
+          const copyBtn = form.querySelector('button[data-action="copy"]');
+          const saveBtn = form.querySelector(
+            'button[data-action="save-draft"]',
+          );
+          const previewPane = form.querySelector("pre");
+          const errorMsg = form.querySelector(".error-message");
+          return {
+            form,
+            textarea,
+            toneInputs,
+            previewBtn,
+            copyBtn,
+            saveBtn,
+            previewPane,
+            errorMsg,
+          };
+        }
+        function validateInput(text) {
+          return text.trim().length > 0;
+        }
+        function generateMessage(text, tone) {
+          const prefix = tone === "friendly" ? "Hey there," : "Dear Sir/Madam,";
+          return `${prefix}\n\n${text.trim()}\n\nBest regards.`;
+        }
+        function previewHandler(variant) {
+          const {
+            textarea,
+            toneInputs,
+            previewPane,
+            errorMsg,
+            copyBtn,
+            saveBtn,
+          } = getFormElements(variant);
+          const text = textarea.value;
+          if (!validateInput(text)) {
+            errorMsg.textContent = "Please enter situation details.";
+            previewPane.style.display = "none";
+            copyBtn.disabled = true;
+            saveBtn.disabled = true;
+            return;
+          }
+          errorMsg.textContent = "";
+          const tone = Array.from(toneInputs).find((r) => r.checked).value;
+          const message = generateMessage(text, tone);
+          previewPane.textContent = message;
+          previewPane.style.display = "block";
+          copyBtn.disabled = false;
+          saveBtn.disabled = false;
+        }
+        function copyHandler(variant) {
+          const { previewPane } = getFormElements(variant);
+          const message = previewPane.textContent;
+          try {
+            navigator.clipboard.writeText(message).then(() => {
+              showToast("Copied!", "success");
+            });
+          } catch (e) {
+            showToast("Failed to copy", "error");
+          }
+        }
+        function saveDraftHandler(variant) {
+          const { textarea, toneInputs, previewPane } =
+            getFormElements(variant);
+          const text = textarea.value;
+          if (!validateInput(text)) {
+            showToast("Cannot save empty draft", "error");
+            return;
+          }
+          const tone = Array.from(toneInputs).find((r) => r.checked).value;
+          const message = generateMessage(text, tone);
+          const draft = { message, tone, timestamp: new Date().toISOString() };
+          let drafts = [];
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) drafts = JSON.parse(stored);
+          } catch (e) {
+            showToast("Failed to load drafts", "error");
+          }
+          drafts.push(draft);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+            showToast("Draft saved", "success");
+          } catch (e) {
+            showToast("Failed to save draft", "error");
+          }
+        }
+        function loadDrafts() {
+          let drafts = [];
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) drafts = JSON.parse(stored);
+          } catch (e) {
+            showToast("Failed to load drafts", "error");
+          }
+          return drafts;
+        }
+        function renderDraftList() {
+          const drafts = loadDrafts();
+          draftList.innerHTML = "";
+          if (drafts.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "No drafts saved.";
+            draftList.appendChild(li);
+            return;
+          }
+          drafts.forEach((draft, index) => {
+            const li = document.createElement("li");
+            const title = draft.message.split("\n")[0].substring(0, 30);
+            const date = new Date(draft.timestamp).toLocaleString();
+            li.innerHTML = `<span>${title}... (${date})</span>`;
+            const viewBtn = document.createElement("button");
+            viewBtn.type = "button";
+            viewBtn.textContent = "View";
+            viewBtn.dataset.index = index;
+            viewBtn.addEventListener("click", () => {
+              showDraftDetail(index);
+            });
+            li.appendChild(viewBtn);
+            draftList.appendChild(li);
+          });
+        }
+        function showDraftDetail(index) {
+          const drafts = loadDrafts();
+          const draft = drafts[index];
+          detailTone.textContent = draft.tone;
+          detailDate.textContent = new Date(draft.timestamp).toLocaleString();
+          detailMessage.textContent = draft.message;
+          draftDetail.style.display = "block";
+          draftList.style.display = "none";
+        }
+        function closeModal() {
+          modal.classList.add("hidden");
+          draftDetail.style.display = "none";
+          draftList.style.display = "block";
+        }
+        function switchDesign() {
+          const variants = document.querySelectorAll(".design-variant");
+          variants.forEach((v) => v.classList.remove("active"));
+          const nextVariant = currentVariant === "a" ? "b" : "a";
+          document
+            .querySelector(`[data-design-variant="${nextVariant}"]`)
+            .classList.add("active");
+          currentVariant = nextVariant;
+        }
+        document.addEventListener("click", function (e) {
+          const action = e.target.dataset.action;
+          if (!action) return;
+          if (action === "preview") {
+            previewHandler(currentVariant);
+          } else if (action === "copy") {
+            copyHandler(currentVariant);
+          } else if (action === "save-draft") {
+            saveDraftHandler(currentVariant);
+          } else if (action === "view-drafts") {
+            renderDraftList();
+            modal.classList.remove("hidden");
+          } else if (action === "close-modal") {
+            closeModal();
+          } else if (action === "back-to-list") {
+            draftDetail.style.display = "none";
+            draftList.style.display = "block";
+          } else if (action === "switch-design") {
+            switchDesign();
+          }
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+            closeModal();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

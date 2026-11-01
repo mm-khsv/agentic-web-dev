@@ -366,24 +366,47 @@ class Orchestrator:
         execution_status: str,
         message: str,
     ) -> dict:
-        """Record a validated agent execution without approving human gates."""
+        """Persist a draft without approving its human review gate."""
         run = self._require_workflow(run_id)
 
         if run["status"] != "in_progress":
             raise ValueError(
                 f"Workflow cannot run an agent while status is '{run['status']}'."
             )
-        if run["current_stage"] != "requirements":
-            raise ValueError(
-                "This runtime version only supports the requirements stage."
-            )
-        if run["gate_states"].get("G1") != "pending":
-            raise ValueError(
-                "Requirements execution is only allowed while G1 is pending."
-            )
-        if agent_name != "requirements-analyst":
+
+        agent_policy = {
+            "requirements-analyst": ("requirements", "G1", "specs"),
+            "ui-ux-designer": ("ux_design", "G2", "docs/ux"),
+        }
+        policy = agent_policy.get(agent_name)
+
+        # Keep the legacy requirements-stage error contract for existing callers.
+        if policy is None:
+            if run["current_stage"] != "requirements":
+                raise ValueError(
+                    "This runtime version only supports the requirements stage."
+                )
+            if run["gate_states"].get("G1") != "pending":
+                raise ValueError(
+                    "Requirements execution is only allowed while G1 is pending."
+                )
             raise ValueError(
                 "This runtime version only supports requirements-analyst."
+            )
+
+        expected_stage, gate_id, allowed_root = policy
+        if run["current_stage"] != expected_stage:
+            if agent_name == "requirements-analyst":
+                raise ValueError(
+                    "This runtime version only supports the requirements stage."
+                )
+            raise ValueError(
+                f"Agent '{agent_name}' can only run in stage '{expected_stage}'."
+            )
+
+        if run["gate_states"].get(gate_id) != "pending":
+            raise ValueError(
+                f"Execution is only allowed while {gate_id} is pending."
             )
 
         if execution_status != "draft_created":
@@ -394,6 +417,9 @@ class Orchestrator:
         if not isinstance(message, str) or not message.strip():
             raise ValueError("Execution message must be a non-empty string.")
 
+        error = (
+            f"Artifact path must be a normalized relative path inside {allowed_root}/."
+        )
         if (
             not isinstance(artifact_path, str)
             or not artifact_path
@@ -401,45 +427,50 @@ class Orchestrator:
             or "\\" in artifact_path
             or "\x00" in artifact_path
         ):
-            raise ValueError(
-                "Artifact path must be a normalized relative path inside specs/."
-            )
+            raise ValueError(error)
 
         posix_path = PurePosixPath(artifact_path)
         windows_path = PureWindowsPath(artifact_path)
-        path_parts = artifact_path.split("/")
+        parts = artifact_path.split("/")
+        root_parts = allowed_root.split("/")
 
         if (
             posix_path.is_absolute()
             or windows_path.is_absolute()
             or bool(windows_path.drive)
-            or len(path_parts) < 2
-            or path_parts[0] != "specs"
-            or any(part in ("", ".", "..") for part in path_parts)
+            or len(parts) < len(root_parts) + 1
+            or parts[:len(root_parts)] != root_parts
+            or any(part in ("", ".", "..") for part in parts)
             or posix_path.as_posix() != artifact_path
         ):
-            raise ValueError(
-                "Artifact path must be a normalized relative path inside specs/."
-            )
+            raise ValueError(error)
 
         project_root = PROJECT_ROOT.resolve()
         target = (project_root / posix_path).resolve()
-
         try:
             resolved_relative = target.relative_to(project_root).as_posix()
         except ValueError as exc:
-            raise ValueError(
-                "Artifact must resolve inside the project root."
-            ) from exc
+            raise ValueError("Artifact must resolve inside the project root.") from exc
 
         resolved_parts = PurePosixPath(resolved_relative).parts
         if (
-            len(resolved_parts) < 2
-            or resolved_parts[0] != "specs"
+            len(resolved_parts) < len(root_parts) + 1
+            or tuple(resolved_parts[:len(root_parts)]) != tuple(root_parts)
             or not target.is_file()
         ):
             raise FileNotFoundError(
-                "Artifact must be an existing file inside the specs/ directory."
+                f"Artifact must be an existing file inside {allowed_root}/."
+            )
+
+        duplicate = any(
+            event.get("type") == "agent_execution_completed"
+            and event.get("agent_name") == agent_name
+            and event.get("artifact_path") == artifact_path
+            for event in run["events"]
+        )
+        if duplicate:
+            raise ValueError(
+                "This agent execution and artifact are already registered."
             )
 
         now = utc_now()
@@ -453,6 +484,125 @@ class Orchestrator:
             "artifact_path": artifact_path,
             "message": message.strip(),
         })
+        self._save(run)
+        return run
+
+    def record_agent_execution_bundle(
+        self,
+        run_id: str,
+        agent_name: str,
+        artifact_paths: list[str] | tuple[str, ...],
+        execution_status: str,
+        message: str,
+    ) -> dict:
+        """Register multiple existing artifacts as one execution event.
+
+        Validates every artifact before mutating workflow state. This method
+        never approves a human gate.
+        """
+        if not isinstance(artifact_paths, (list, tuple)) or not artifact_paths:
+            raise ValueError("Artifact bundle must contain at least one path.")
+        if any(not isinstance(p, str) for p in artifact_paths):
+            raise ValueError("Every artifact path must be a string.")
+        if len(set(artifact_paths)) != len(artifact_paths):
+            raise ValueError("Artifact bundle contains duplicate paths.")
+
+        run = self._require_workflow(run_id)
+        if run["status"] != "in_progress":
+            raise ValueError(
+                f"Workflow cannot run an agent while status is '{run['status']}'."
+            )
+
+        policies = {
+            "requirements-analyst": ("requirements", "G1", "specs"),
+            "ui-ux-designer": ("ux_design", "G2", "docs/ux"),
+        }
+        if agent_name not in policies:
+            raise ValueError(f"Unsupported agent for bundle registration: {agent_name}")
+
+        expected_stage, gate_id, allowed_root = policies[agent_name]
+        if run["current_stage"] != expected_stage:
+            raise ValueError(
+                f"Agent '{agent_name}' can only run in stage '{expected_stage}'."
+            )
+        if run["gate_states"].get(gate_id) != "pending":
+            raise ValueError(f"Execution is only allowed while {gate_id} is pending.")
+        if execution_status != "draft_created":
+            raise ValueError("Unsupported execution status; expected 'draft_created'.")
+        if not isinstance(message, str) or not message.strip():
+            raise ValueError("Execution message must be a non-empty string.")
+
+        project_root = PROJECT_ROOT.resolve()
+        normalized_paths = []
+        for artifact_path in artifact_paths:
+            error = (
+                f"Artifact path must be a normalized relative path inside {allowed_root}/."
+            )
+            if (
+                not artifact_path
+                or artifact_path != artifact_path.strip()
+                or "\\" in artifact_path
+                or "\x00" in artifact_path
+            ):
+                raise ValueError(error)
+
+            posix_path = PurePosixPath(artifact_path)
+            windows_path = PureWindowsPath(artifact_path)
+            parts = artifact_path.split("/")
+            root_parts = allowed_root.split("/")
+            if (
+                posix_path.is_absolute()
+                or windows_path.is_absolute()
+                or bool(windows_path.drive)
+                or len(parts) < len(root_parts) + 1
+                or parts[:len(root_parts)] != root_parts
+                or any(part in ("", ".", "..") for part in parts)
+                or posix_path.as_posix() != artifact_path
+            ):
+                raise ValueError(error)
+
+            target = (project_root / posix_path).resolve()
+            try:
+                resolved_relative = target.relative_to(project_root).as_posix()
+            except ValueError as exc:
+                raise ValueError("Artifact must resolve inside the project root.") from exc
+
+            resolved_parts = PurePosixPath(resolved_relative).parts
+            if (
+                len(resolved_parts) < len(root_parts) + 1
+                or tuple(resolved_parts[:len(root_parts)]) != tuple(root_parts)
+                or not target.is_file()
+            ):
+                raise FileNotFoundError(
+                    f"Artifact must be an existing file inside {allowed_root}/."
+                )
+            normalized_paths.append(artifact_path)
+
+        existing = set()
+        for event in run["events"]:
+            if (
+                event.get("type") == "agent_execution_completed"
+                and event.get("agent_name") == agent_name
+            ):
+                existing.update(event.get("artifact_paths", []))
+                if event.get("artifact_path"):
+                    existing.add(event["artifact_path"])
+        if existing.intersection(normalized_paths):
+            raise ValueError("One or more artifacts are already registered for this agent.")
+
+        now = utc_now()
+        event = {
+            "type": "agent_execution_completed",
+            "timestamp": now,
+            "stage_id": run["current_stage"],
+            "agent_name": agent_name,
+            "execution_status": execution_status,
+            "artifact_path": normalized_paths[0],
+            "artifact_paths": normalized_paths,
+            "message": message.strip(),
+        }
+        run["updated_at"] = now
+        run["events"].append(event)
         self._save(run)
         return run
 

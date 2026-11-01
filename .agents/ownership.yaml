@@ -9,3 +9,5 @@
 "app/**":
   - frontend-engineer
   - api-engineer
+"docs/ux/**":
+  - ui-ux-designer

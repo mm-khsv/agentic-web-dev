@@ -287,5 +287,27 @@ class WorkflowEngineTests(unittest.TestCase):
         ))
 
 
+    def test_g2_approval_is_blocked_until_g1_is_approved(self):
+        run = self.app.start_workflow(
+            "Build a sample web application",
+            g2_roles=["product_owner"],
+        )
+
+        with self.assertRaisesRegex(ValueError, "Gate decision blocked"):
+            self.app.decide_gate(
+                run_id=run["run_id"],
+                gate_id="G2",
+                outcome="approved",
+                approver="test-reviewer",
+                approver_role="product_owner",
+                reason="Attempt before G1",
+            )
+
+        persisted = self.app.get_workflow(run["run_id"])
+        self.assertEqual(persisted["gate_states"]["G1"], "pending")
+        self.assertEqual(persisted["gate_states"]["G2"], "pending")
+        self.assertNotIn("G2", persisted["gate_decisions"])
+
+
 if __name__ == "__main__":
     unittest.main()

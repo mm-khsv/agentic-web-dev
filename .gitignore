@@ -37,3 +37,11 @@ specs/001/m3-*.md
 
 # Pytest cache
 .pytest_cache/
+
+# Additional local backups and diagnostic reports
+*.bak*
+*.backup*
+reports/
+
+# Temporary files
+*.tmp

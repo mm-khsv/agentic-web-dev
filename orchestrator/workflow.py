@@ -313,7 +313,7 @@ STAGES = (
         id="ux_design",
         number=2,
         name="UX design",
-        lead_roles=("ux-designer",),
+        lead_roles=("ui-ux-designer",),
         output_paths=("docs/ux/", "prototypes/"),
         other_outputs=(
             "design tokens (the PDF's example file is tailwind.config.ts, "
